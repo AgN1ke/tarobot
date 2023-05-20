@@ -1,6 +1,3 @@
-# Замените на ваш ключ API OpenAI openai.api_key = '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'
-# Замените на ваш токен Telegram updater = Updater(token='6294843629:AAG_VbK-m_WoHCtb__okjwnuWgfWCwi_B9I',
-# use_context=True)
 from aiogram import Bot, types
 from aiogram.dispatcher import Dispatcher
 from aiogram.utils.executor import start_polling
