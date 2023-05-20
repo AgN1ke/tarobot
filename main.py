@@ -69,13 +69,32 @@ layout_names = {
     '4': "Путь жизни",
 }
 
+user_data = {}
+
 
 @dp.message_handler(commands=['start'])
 async def start(message: types.Message):
     # Выводим ID пользователя при вызове команды /start
     user_id = message.from_user.id
     print(f"User ID: {user_id}")
+    user_data[user_id] = {}  # создаем словарь для пользователя
+    await bot.send_message(chat_id=message.chat.id, text='Пожалуйста, введите ваше имя:')
 
+
+@dp.message_handler(lambda message: not user_data[message.from_user.id])
+async def ask_name(message: types.Message):
+    user_data[message.from_user.id]['name'] = message.text  # сохраняем имя
+    await bot.send_message(chat_id=message.chat.id, text='Пожалуйста, введите ваш возраст:')
+
+
+@dp.message_handler(
+    lambda message: 'name' in user_data[message.from_user.id] and 'age' not in user_data[message.from_user.id])
+async def ask_age(message: types.Message):
+    user_data[message.from_user.id]['age'] = message.text  # сохраняем возраст
+    await send_layout_keyboard(message)
+
+
+async def send_layout_keyboard(message: types.Message):
     keyboard = [
         [
             InlineKeyboardButton("Крест Кельтов", callback_data='1'),
@@ -86,20 +105,18 @@ async def start(message: types.Message):
             InlineKeyboardButton("Путь жизни", callback_data='4')
         ]
     ]
-
     reply_markup = InlineKeyboardMarkup(inline_keyboard=keyboard)
-
     await bot.send_message(chat_id=message.chat.id, text='Пожалуйста выберите расклад:', reply_markup=reply_markup)
-
-    print(f"/start")
-
 
 
 @dp.callback_query_handler(lambda c: c.data and c.data in ['1', '2', '3', '4'])
 async def process_callback(callback_query: types.CallbackQuery):
     await bot.answer_callback_query(callback_query.id)
 
+    user_id = callback_query.from_user.id
+
     layout_name = layout_names[callback_query.data]
+    user_data[user_id]['layout_name'] = layout_name  # сохраняем layout_name в данные пользователя
 
     # Выберем функцию для расклада в зависимости от выбора пользователя
     layout_func = layout_functions[callback_query.data]
@@ -107,19 +124,25 @@ async def process_callback(callback_query: types.CallbackQuery):
 
     # Форматируем каждую карточку на новой строке
     cards_positions_text = '\n'.join(f"{pos}: {card}" for card, pos in drawn_cards_with_positions)
+    user_data[user_id][
+        'cards_positions_text'] = cards_positions_text  # сохраняем cards_positions_text в данные пользователя
 
     # Отправляем расклад пользователю перед интерпретацией
-    await bot.send_message(chat_id=callback_query.message.chat.id, text=f"Ваш расклад '{layout_name}':\n{cards_positions_text}")
+    await bot.send_message(chat_id=callback_query.message.chat.id,
+                           text=f"Ваш расклад '{layout_name}':\n{cards_positions_text}")
 
     # Сообщение пользователю о начале обработки расклада OpenAI
     await bot.send_message(chat_id=callback_query.message.chat.id, text='Пожалуйста, подождите...')
 
-    prompt_prefix = "Я таролог и только что сделал расклад "
-    prompt_postfix = f". Вот расклад:\n{cards_positions_text}\n" \
-                     f"Интерпретируй этот расклад для клиента от моего лица. Делай отступы между картами. " \
-                     f"До 1000 символов"
+    # Добавьте имя и возраст в запрос к GPT
+    user_name = user_data.get(user_id, {}).get('name', '')
+    user_age = user_data.get(user_id, {}).get('age', '')
 
-    prompt = prompt_prefix + f"'{layout_name}'" + prompt_postfix
+    prompt_prefix = f"Я таролог и только что сделал расклад для клиента по имени {user_name}, возраст {user_age}. Расклад "
+    prompt_postfix = f"'{layout_name}':\n{cards_positions_text}\n" \
+                     f"Интерпретируй этот расклад для клиента от моего лица кратко. Делай отступы между картами."
+
+    prompt = prompt_prefix + prompt_postfix
 
     print(f"Запрос к GPT: {prompt}")
 
@@ -128,7 +151,7 @@ async def process_callback(callback_query: types.CallbackQuery):
             engine="text-davinci-003",
             prompt=prompt,
             temperature=0.5,
-            max_tokens=1700
+            max_tokens=1500
         )
 
         if 'choices' in response and response['choices'] and 'text' in response['choices'][0]:
