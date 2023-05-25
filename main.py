@@ -6,6 +6,19 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 import openai
 import random
 import json
+import sqlite3
+
+#БД
+conn = sqlite3.connect('users.db')
+cursor = conn.cursor()
+cursor.execute("CREATE TABLE IF NOT EXISTS users ("
+               "user_id INT PRIMARY KEY, "
+               "first_name TEXT, "
+               "last_name TEXT, "
+               "name TEXT, "
+               "age TEXT, "
+               "gender TEXT, "
+               "issue TEXT)")
 
 openai.api_key = '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'
 bot = Bot(token='6294843629:AAG_VbK-m_WoHCtb__okjwnuWgfWCwi_B9I')
@@ -95,19 +108,21 @@ user_data = {}
 @dp.message_handler(commands=['start'])
 async def start(message: types.Message):
     user_id = message.from_user.id
-    print(f"User ID: {user_id}")
+    print(f"Telegram Name: {message.from_user.first_name} {message.from_user.last_name} ID: {user_id}")
     user_data[user_id] = {}
     await bot.send_message(chat_id=message.chat.id, text='Пожалуйста, введите ваше имя:')
 
 @dp.message_handler(lambda message: not user_data[message.from_user.id])
 async def ask_name(message: types.Message):
     user_data[message.from_user.id]['name'] = message.text
+    print(f"User's name: {message.text}")
     await bot.send_message(chat_id=message.chat.id, text='Пожалуйста, введите вашу дату рождения:')
 
 @dp.message_handler(lambda message: 'name' in user_data[message.from_user.id] and
                                     'age' not in user_data[message.from_user.id])
 async def ask_age(message: types.Message):
     user_data[message.from_user.id]['age'] = message.text
+    print(f"User's age: {message.text}")
     await bot.send_message(chat_id=message.chat.id, text='Пожалуйста, укажите ваш пол:')
 
 @dp.message_handler(lambda message: 'name' in user_data[message.from_user.id] and
@@ -115,6 +130,7 @@ async def ask_age(message: types.Message):
                                     'gender' not in user_data[message.from_user.id])
 async def ask_gender(message: types.Message):
     user_data[message.from_user.id]['gender'] = message.text
+    print(f"User's gender: {message.text}")
     await bot.send_message(chat_id=message.chat.id, text='Пожалуйста, расскажите о вашей текущей проблеме:')
 
 @dp.message_handler(lambda message: 'name' in user_data[message.from_user.id] and
@@ -123,6 +139,16 @@ async def ask_gender(message: types.Message):
                                     'issue' not in user_data[message.from_user.id])
 async def ask_issue(message: types.Message):
     user_data[message.from_user.id]['issue'] = message.text
+    print(f"User's issue: {message.text}")
+
+    cursor.execute("INSERT INTO users VALUES (?, ?, ?, ?, ?, ?, ?)",
+                  (message.from_user.id, message.from_user.first_name, message.from_user.last_name,
+                   user_data[message.from_user.id]['name'],
+                   user_data[message.from_user.id]['age'],
+                   user_data[message.from_user.id]['gender'],
+                   user_data[message.from_user.id]['issue']))
+    conn.commit()
+
     await send_layout_keyboard(message)
 
 
@@ -181,10 +207,13 @@ async def ask_question_about_card(chat_id):
 
     prompt = f"Ты сделал расклад для клиента по имени {user_name}, дата рождения {user_age}, " \
              f"пол {user_gender}, проблема {user_issue}. " \
-             f"Расклад '{layout_name}':\n{cards_positions_text}\n" \
-             f"Предложи наводящий вопрос к карте {card} в контексте '{pos}'."
+             f"Расклад: '{layout_name}':\n{cards_positions_text}\n" \
+             f"Предложи наводящий вопрос, который нужен для трактовки карты {card} в контексте '{pos}' " \
+             f"и личных данных человека." \
+             f"Обращайся от моего лица по имени на ты." \
+             f"Не здоровайся, не пиши ничего лишнего кроме вопроса."
 
-    await gpt_request(chat_id, prompt, 200)
+    await gpt_request(chat_id, prompt, 250)
 
 async def interpret_card(chat_id):
     user_response = user_data[chat_id].get('user_response', '')
@@ -192,6 +221,8 @@ async def interpret_card(chat_id):
     user_name = user_data.get(chat_id, {}).get('name', '')
     user_age = user_data.get(chat_id, {}).get('age', '')
     layout_name = user_data[chat_id]['layout_name']
+    user_gender = user_data.get(chat_id, {}).get('gender', '')
+    user_issue = user_data.get(chat_id, {}).get('issue', '')
     drawn_cards_with_positions = user_data[chat_id]['drawn_cards_with_positions']
     current_card_index = user_data[chat_id]['current_card_index']
 
@@ -199,10 +230,11 @@ async def interpret_card(chat_id):
 
     cards_positions_text = '\n'.join(f"{pos}: {card}" for card, pos in drawn_cards_with_positions)
 
-    prompt = f"Ты таролог и только что сделал расклад для клиента по имени {user_name}, {user_age} лет. " \
+    prompt = f"Ты только что сделал расклад для клиента по имени {user_name}, дата рождения {user_age}. " \
+             f"пол {user_gender}, проблема {user_issue}. " \
              f"Расклад '{layout_name}':\n{cards_positions_text}\n" \
              f"Клиент ответил на ваш вопрос о карте {card} в контексте '{pos}': '{user_response}'. " \
-             f"Интерпретируй карту {card} в контексте '{pos}' от моего лица обращаясь по имени. "
+             f"Интерпретируй карту {card} в контексте '{pos}' от моего лица обращаясь по имени и на ты. "
 
     await gpt_request(chat_id, prompt, 2000)
 
