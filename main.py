@@ -306,34 +306,25 @@ async def process_callback(callback_query: types.CallbackQuery):
 
     chat_id = callback_query.message.chat.id
 
-    # Проверяем, существует ли история чата для этого чата, если нет, инициализируем
     if chat_id not in chat_histories:
         chat_histories[chat_id] = []
-
-    #chat_history = chat_histories[chat_id]
 
     layout_name = layout_names[callback_query.data]
     user_data[chat_id]['layout_name'] = layout_name
 
-    # Выбираем функцию для расклада в зависимости от выбора пользователя
     layout_func = layout_functions[callback_query.data]
     drawn_cards_with_positions = layout_func()
 
     user_data[chat_id]['drawn_cards_with_positions'] = drawn_cards_with_positions
-    user_data[chat_id]['current_card_index'] = 0  # Добавляем индекс текущей карты
+    user_data[chat_id]['current_card_index'] = 0
 
-    # Форматируем каждую карточку на новой строке
     cards_positions_text = '\n'.join(f"{pos}: {card}" for card, pos in drawn_cards_with_positions)
 
-    # Отправляем расклад пользователю перед интерпретацией
     await bot.send_message(chat_id=callback_query.message.chat.id, text=cards_positions_text)
 
-    # Заменяем цикл for на вызов функции interpret_next_card
     await ask_question_about_card(chat_id)
 
 async def ask_question_about_card(chat_id):
-    # Получаем данные пользователя и расклад
-    # Получаем данные пользователя и расклад
     user_name = user_data.get(chat_id, {}).get('name', '')
     user_age = user_data.get(chat_id, {}).get('age', '')
     user_gender = user_data.get(chat_id, {}).get('gender', '')
@@ -342,63 +333,62 @@ async def ask_question_about_card(chat_id):
     drawn_cards_with_positions = user_data[chat_id]['drawn_cards_with_positions']
     current_card_index = user_data[chat_id]['current_card_index']
 
-    # Получаем текущую карту и ее позицию
     card, pos = drawn_cards_with_positions[current_card_index]
 
-    # Форматируем каждую карточку на новой строке
     cards_positions_text = '\n'.join(f"{pos}: {card}" for card, pos in drawn_cards_with_positions)
 
-    # Создаем запрос к GPT для получения наводящего вопроса
-    prompt = f"Ты таролог и только что сделал расклад для клиента по имени {user_name}, дата рождения {user_age}, " \
+    prompt = f"Ты сделал расклад для клиента по имени {user_name}, дата рождения {user_age}, " \
              f"пол {user_gender}, проблема {user_issue}. " \
              f"Расклад '{layout_name}':\n{cards_positions_text}\n" \
              f"Предложи наводящий вопрос к карте {card} в контексте '{pos}'."
 
-    print(f"Запрос к GPT: {prompt}")
-
-    try:
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "Ты - ассистент, обученный интерпретировать расклады карт таро."},
-                {"role": "user", "content": prompt}
-            ],
-            max_tokens=200
-        )
-
-        bot_response = response['choices'][0]['message']['content']
-        chat_histories[chat_id].append({"role": "assistant", "content": bot_response})
-        print(f"Bot: {bot_response}")
-
-        await bot.send_message(chat_id=chat_id, text=bot_response)
-
-    except Exception as e:
-        print(f"Произошла ошибка при запросе к OpenAI: {e}")
-
+    await gpt_request(chat_id, prompt, 200)
 
 async def interpret_card(chat_id):
-    # Получаем ответ пользователя на наводящий вопрос
     user_response = user_data[chat_id].get('user_response', '')
 
-    # Получаем данные пользователя и расклад
     user_name = user_data.get(chat_id, {}).get('name', '')
     user_age = user_data.get(chat_id, {}).get('age', '')
     layout_name = user_data[chat_id]['layout_name']
     drawn_cards_with_positions = user_data[chat_id]['drawn_cards_with_positions']
     current_card_index = user_data[chat_id]['current_card_index']
 
-    # Получаем текущую карту и ее позицию
     card, pos = drawn_cards_with_positions[current_card_index]
 
-    # Форматируем каждую карточку на новой строке
     cards_positions_text = '\n'.join(f"{pos}: {card}" for card, pos in drawn_cards_with_positions)
 
-    # Создаем запрос к GPT для интерпретации карты
     prompt = f"Ты таролог и только что сделал расклад для клиента по имени {user_name}, {user_age} лет. " \
              f"Расклад '{layout_name}':\n{cards_positions_text}\n" \
              f"Клиент ответил на ваш вопрос о карте {card} в контексте '{pos}': '{user_response}'. " \
              f"Интерпретируй карту {card} в контексте '{pos}' от моего лица обращаясь по имени. "
 
+    await gpt_request(chat_id, prompt, 2000)
+
+    user_data[chat_id]['current_card_index'] += 1
+    user_data[chat_id]['user_response'] = ''
+
+    if user_data[chat_id]['current_card_index'] < len(drawn_cards_with_positions):
+        await ask_question_about_card(chat_id)
+    else:
+        await bot.send_message(chat_id=chat_id, text="Интерпретация расклада завершена.")
+
+@dp.message_handler(content_types=['text'])
+async def process_user_input(message: types.Message):
+    chat_id = message.chat.id
+
+    if chat_id not in chat_histories:
+        print("Ошибка: нет истории чата для этого chat_id.")
+        return
+
+    chat_history = chat_histories[chat_id]
+
+    user_input = message.text
+    chat_history.append({"role": "user", "content": user_input})
+
+    user_data[chat_id]['user_response'] = user_input
+    await interpret_card(chat_id)
+
+async def gpt_request(chat_id, prompt, max_tokens):
     print(f"Запрос к GPT: {prompt}")
 
     try:
@@ -408,7 +398,7 @@ async def interpret_card(chat_id):
                 {"role": "system", "content": "Ты - ассистент, обученный интерпретировать расклады карт таро."},
                 {"role": "user", "content": prompt}
             ],
-            max_tokens=2000
+            max_tokens=max_tokens
         )
 
         bot_response = response['choices'][0]['message']['content']
@@ -416,36 +406,8 @@ async def interpret_card(chat_id):
         print(f"Bot: {bot_response}")
 
         await bot.send_message(chat_id=chat_id, text=bot_response)
-
-        # Переходим к следующей карте
-        user_data[chat_id]['current_card_index'] += 1
-        user_data[chat_id]['user_response'] = ''  # Очищаем ответ пользователя
-        if user_data[chat_id]['current_card_index'] < len(drawn_cards_with_positions):
-            await ask_question_about_card(chat_id)
-        else:
-            await bot.send_message(chat_id=chat_id, text="Интерпретация расклада завершена.")
-
     except Exception as e:
         print(f"Произошла ошибка при запросе к OpenAI: {e}")
-
-@dp.message_handler(content_types=['text'])
-async def process_user_input(message: types.Message):
-    chat_id = message.chat.id
-
-    # Проверяем, есть ли история чата для этого чата
-    if chat_id not in chat_histories:
-        print("Ошибка: нет истории чата для этого chat_id.")
-        return
-
-    chat_history = chat_histories[chat_id]
-
-    # Добавляем введенный пользователем текст в историю чата
-    user_input = message.text
-    chat_history.append({"role": "user", "content": user_input})
-
-    # Сохраняем ответ пользователя и продолжаем с интерпретацией карты
-    user_data[chat_id]['user_response'] = user_input
-    await interpret_card(chat_id)
 
 @dp.message_handler(commands=['help'])
 async def help_command(message: types.Message):
