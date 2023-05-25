@@ -250,34 +250,39 @@ layout_names = {
 
 user_data = {}
 
-@dp.message_handler(content_types=['sticker'])
-async def sticker_id(message: types.Message):
-    print("ID стикера:", message.sticker.file_id)
-    await message.reply(f"ID стикера: {message.sticker.file_id}")
-
-@dp.message_handler(content_types=['animation'])
-async def animation_id(message: types.Message):
-    print("ID гифки:", message.animation.file_id)
-    await message.reply(f"ID гифки: {message.animation.file_id}")
-
 @dp.message_handler(commands=['start'])
 async def start(message: types.Message):
-    # Выводим ID пользователя при вызове команды /start
     user_id = message.from_user.id
     print(f"User ID: {user_id}")
-    user_data[user_id] = {}  # создаем словарь для пользователя
+    user_data[user_id] = {}
     await bot.send_message(chat_id=message.chat.id, text='Пожалуйста, введите ваше имя:')
 
 @dp.message_handler(lambda message: not user_data[message.from_user.id])
 async def ask_name(message: types.Message):
-    user_data[message.from_user.id]['name'] = message.text  # сохраняем имя
+    user_data[message.from_user.id]['name'] = message.text
     await bot.send_message(chat_id=message.chat.id, text='Пожалуйста, введите вашу дату рождения:')
 
-@dp.message_handler(
-    lambda message: 'name' in user_data[message.from_user.id] and 'age' not in user_data[message.from_user.id])
+@dp.message_handler(lambda message: 'name' in user_data[message.from_user.id] and
+                                    'age' not in user_data[message.from_user.id])
 async def ask_age(message: types.Message):
-    user_data[message.from_user.id]['age'] = message.text  # сохраняем возраст
+    user_data[message.from_user.id]['age'] = message.text
+    await bot.send_message(chat_id=message.chat.id, text='Пожалуйста, укажите ваш пол:')
+
+@dp.message_handler(lambda message: 'name' in user_data[message.from_user.id] and
+                                    'age' in user_data[message.from_user.id] and
+                                    'gender' not in user_data[message.from_user.id])
+async def ask_gender(message: types.Message):
+    user_data[message.from_user.id]['gender'] = message.text
+    await bot.send_message(chat_id=message.chat.id, text='Пожалуйста, расскажите о вашей текущей проблеме:')
+
+@dp.message_handler(lambda message: 'name' in user_data[message.from_user.id] and
+                                    'age' in user_data[message.from_user.id] and
+                                    'gender' in user_data[message.from_user.id] and
+                                    'issue' not in user_data[message.from_user.id])
+async def ask_issue(message: types.Message):
+    user_data[message.from_user.id]['issue'] = message.text
     await send_layout_keyboard(message)
+
 
 async def send_layout_keyboard(message: types.Message):
     keyboard = [
@@ -328,8 +333,11 @@ async def process_callback(callback_query: types.CallbackQuery):
 
 async def ask_question_about_card(chat_id):
     # Получаем данные пользователя и расклад
+    # Получаем данные пользователя и расклад
     user_name = user_data.get(chat_id, {}).get('name', '')
     user_age = user_data.get(chat_id, {}).get('age', '')
+    user_gender = user_data.get(chat_id, {}).get('gender', '')
+    user_issue = user_data.get(chat_id, {}).get('issue', '')
     layout_name = user_data[chat_id]['layout_name']
     drawn_cards_with_positions = user_data[chat_id]['drawn_cards_with_positions']
     current_card_index = user_data[chat_id]['current_card_index']
@@ -341,7 +349,8 @@ async def ask_question_about_card(chat_id):
     cards_positions_text = '\n'.join(f"{pos}: {card}" for card, pos in drawn_cards_with_positions)
 
     # Создаем запрос к GPT для получения наводящего вопроса
-    prompt = f"Ты таролог и только что сделал расклад для клиента по имени {user_name}, дата рождения {user_age}. " \
+    prompt = f"Ты таролог и только что сделал расклад для клиента по имени {user_name}, дата рождения {user_age}, " \
+             f"пол {user_gender}, проблема {user_issue}. " \
              f"Расклад '{layout_name}':\n{cards_positions_text}\n" \
              f"Предложи наводящий вопрос к карте {card} в контексте '{pos}'."
 
