@@ -18,13 +18,6 @@ class TarotBot:
         self.setup_handlers()
 
     def setup_handlers(self):
-        # ...
-        self.dp.message_handler(content_types=['text'])(self.start)
-        # ...
-        # ...
-        self.dp.callback_query_handler(lambda c: c.data == "start_layout")(self.start_layout)
-        self.dp.callback_query_handler(lambda c: c.data == "settings")(self.settings)
-        # ...
         self.dp.message_handler(commands=['start'])(self.start)
         self.dp.message_handler(lambda message: not self.user_data[message.from_user.id])(self.ask_name)
         self.dp.message_handler(lambda message: 'name' in self.user_data[message.from_user.id] and
@@ -41,21 +34,6 @@ class TarotBot:
         self.dp.message_handler(content_types=['text'])(self.process_user_input)
 
     async def start(self, message: types.Message):
-        user_id = message.from_user.id
-        print(f"Telegram Name: {message.from_user.first_name} {message.from_user.last_name} ID: {user_id}")
-
-        # Создаем кнопки
-        keyboard = InlineKeyboardMarkup(row_width=2)
-        start_button = InlineKeyboardButton(text="Начать расклад", callback_data="start_layout")
-        settings_button = InlineKeyboardButton(text="Настройки личного кабинета", callback_data="settings")
-        keyboard.add(start_button, settings_button)
-
-        # Проверяем, существует ли личный кабинет пользователя
-        if not self.bd.user_exists(user_id):
-            self.user_data[user_id] = {}
-            await self.bot.send_message(chat_id=message.chat.id, text="Добро пожаловать! Выберите действие:", reply_markup=keyboard)
-        else:
-            await self.bot.send_message(chat_id=message.chat.id, text="С возвращением! Выберите действие:", reply_markup=keyboard)
         user_id = message.from_user.id
         print(f"Telegram Name: {message.from_user.first_name} {message.from_user.last_name} ID: {user_id}")
         self.user_data[user_id] = {}
@@ -203,25 +181,3 @@ class TarotBot:
 
     def main(self):
         start_polling(self.dp)
-
-    async def start_layout(self, callback_query: types.CallbackQuery):
-        user_id = callback_query.from_user.id
-        # Здесь добавьте код для начала расклада
-        await self.bot.send_message(chat_id=user_id, text="Начинаем расклад...")
-
-    async def settings(self, callback_query: types.CallbackQuery):
-        user_id = callback_query.from_user.id
-        # Здесь добавьте код для настройки личного кабинета
-        await self.bot.send_message(chat_id=user_id, text="Открываем настройки личного кабинета...")
-    async def choose_layout(self, callback_query: types.CallbackQuery, layout_name):
-        user_id = callback_query.from_user.id
-
-        # Получение карт для расклада
-        layout_function = layout_functions[layout_name]
-        cards = layout_function()
-
-        # Отправка ответа пользователю
-        response = "Расклад:\n\n"
-        for card, position in cards:
-            response += f"{position}: {card}\n"
-        await self.bot.send_message(chat_id=user_id, text=response)
