@@ -1,8 +1,8 @@
 # main.py
 
-from telega import TarotBot
-from gpt import GPTAssistant
-from bd import DataBase
+from src.tarot_bot import TarotBot
+from src.gpt_assistant import GPTAssistant
+from src.database import DataBase
 import configparser
 
 if __name__ == '__main__':

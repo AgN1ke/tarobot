@@ -2,10 +2,10 @@
 import random
 import json
 
-with open('tarot_cards.json', 'r', encoding='utf-8') as f:
+with open('../data/tarot_cards.json', 'r', encoding='utf-8') as f:
     tarot_cards = json.load(f)
 
-with open('tarot_card_sticker_ids.json', 'r', encoding='utf-8') as f:
+with open('../data/tarot_card_sticker_ids.json', 'r', encoding='utf-8') as f:
     tarot_card_sticker_ids = json.load(f)
 
 
@@ -69,10 +69,10 @@ def draw_life_path():
     return list(zip(cards_with_orientations, positions))
 
 
-with open('tarot_cards.json', 'r', encoding='utf-8') as f:
+with open('../data/tarot_cards.json', 'r', encoding='utf-8') as f:
     tarot_cards = json.load(f)
 
-with open('tarot_card_sticker_ids.json', 'r', encoding='utf-8') as f:
+with open('../data/tarot_card_sticker_ids.json', 'r', encoding='utf-8') as f:
     tarot_card_sticker_ids = json.load(f)
 
 

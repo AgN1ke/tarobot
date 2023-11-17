@@ -1,4 +1,4 @@
-# bd.py
+# database.py
 import sqlite3
 
 

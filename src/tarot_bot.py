@@ -4,7 +4,7 @@ from aiogram import Bot, types
 from aiogram.dispatcher import Dispatcher
 from aiogram.utils.executor import start_polling
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
-from rasklady import layout_functions, layout_names
+from tarot_spreads import layout_functions, layout_names
 
 
 class TarotBot:
