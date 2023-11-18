@@ -1,5 +1,5 @@
+# gpt_assistant.py
 # -*- coding: utf-8 -*-
-
 import openai
 import configparser
 

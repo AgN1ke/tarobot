@@ -4,16 +4,18 @@ from aiogram import Bot, types
 from aiogram.dispatcher import Dispatcher
 from aiogram.utils.executor import start_polling
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
-from tarot_spreads import layout_functions, layout_names
+from .tarot_spreads import layout_functions, layout_names
+from .database.database_interface import DatabaseInterface
+from .gpt_assistant import GPTAssistant
 
 
 class TarotBot:
-    def __init__(self, token, bd, gpt):
+    def __init__(self, token: str, database: DatabaseInterface, gpt: GPTAssistant):
         self.bot = Bot(token=token)
         self.dp = Dispatcher(self.bot)
         self.user_data = {}
         self.gpt = gpt
-        self.bd = bd
+        self.database = database
 
         self.setup_handlers()
 
@@ -59,15 +61,15 @@ class TarotBot:
 
         self.user_data.setdefault(user_id, {})
 
-        existing_user = self.bd.user_exists(user_id)
+        existing_user = self.database.user_exists(user_id)
 
         if not existing_user:
-            self.bd.add_user(user_id, message.from_user.first_name, message.from_user.last_name,
-                             self.user_data[user_id]['name'],
-                             self.user_data[user_id]['age'],
-                             self.user_data[user_id]['gender'])
+            self.database.add_user(user_id, message.from_user.first_name, message.from_user.last_name,
+                                   self.user_data[user_id]['name'],
+                                   self.user_data[user_id]['age'],
+                                   self.user_data[user_id]['gender'])
 
-        self.bd.add_issue(user_id, message.text)
+        self.database.add_issue(user_id, message.text)
         self.user_data[user_id]['issue'] = message.text
 
         await self.send_layout_keyboard(message)

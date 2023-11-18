@@ -1,4 +1,5 @@
 /.idea/
 /venv/
 promt.ini
+config.ini
 users.db

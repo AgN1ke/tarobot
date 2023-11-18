@@ -1,11 +1,25 @@
+# tarot_spreads.py
 # -*- coding: utf-8 -*-
+import os
 import random
 import json
 
-with open('../data/tarot_cards.json', 'r', encoding='utf-8') as f:
+# Get the absolute path of the current script
+current_script_path = os.path.abspath(__file__)
+
+# Navigate up one directory from the script's location
+parent_dir = os.path.dirname(os.path.dirname(current_script_path))
+
+# Construct the paths to the JSON files
+tarot_cards_path = os.path.join(parent_dir, 'data', 'tarot_cards.json')
+tarot_card_sticker_ids_path = os.path.join(parent_dir, 'data', 'tarot_card_sticker_ids.json')
+
+# Load the tarot cards data
+with open(tarot_cards_path, 'r', encoding='utf-8') as f:
     tarot_cards = json.load(f)
 
-with open('../data/tarot_card_sticker_ids.json', 'r', encoding='utf-8') as f:
+# Load the tarot card sticker IDs
+with open(tarot_card_sticker_ids_path, 'r', encoding='utf-8') as f:
     tarot_card_sticker_ids = json.load(f)
 
 
@@ -67,13 +81,6 @@ def draw_life_path():
                  'Что ждет в будущем']
     cards_with_orientations = [(card + ' (перевёрнута)' if card_with_orientation() else card) for card in cards]
     return list(zip(cards_with_orientations, positions))
-
-
-with open('../data/tarot_cards.json', 'r', encoding='utf-8') as f:
-    tarot_cards = json.load(f)
-
-with open('../data/tarot_card_sticker_ids.json', 'r', encoding='utf-8') as f:
-    tarot_card_sticker_ids = json.load(f)
 
 
 def card_with_orientation():
