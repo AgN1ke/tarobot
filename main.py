@@ -21,12 +21,10 @@ if __name__ == '__main__':
     token = config.get('tgkey_token')
     api_key = config.get('gptkey_api_key')
 
-    database = get_database(db_type=config.get('db_type'),
-                            db_name=config.get('db_name'),
-                            user=config.get('user'),
-                            password=config.get('password'),
-                            host=config.get('host'))
+    db_url = f"postgresql://{config.get('user')}:{config.get('password')}@{config.get('host')}/{config.get('db_name')}"
+    database = get_database(db_type=config.get('db_type'), db_url=db_url)
 
     gpt_assistant = GPTAssistant(api_key)
     tarot_bot = TarotBot(token, database, gpt_assistant)
+
     tarot_bot.main()

@@ -4,9 +4,9 @@ from aiogram import Bot, types
 from aiogram.dispatcher import Dispatcher
 from aiogram.utils.executor import start_polling
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
-from .tarot_spreads import layout_functions, layout_names
-from .database.database_interface import DatabaseInterface
-from .gpt_assistant import GPTAssistant
+from src.tarot.tarot_spread import layout_functions, layout_names
+from src.database.database_interface import DatabaseInterface
+from src.gpt_assistant import GPTAssistant
 
 
 class TarotBot:

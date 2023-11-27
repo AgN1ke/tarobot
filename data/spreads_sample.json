@@ -1,0 +1,23 @@
+[
+    {
+        "spread_id": 1,
+        "number_of_cards": 3,
+        "name": "Past-Present-Future",
+        "cards": [
+            {"slot_index": 1, "meaning": "Past"},
+            {"slot_index": 2, "meaning": "Present"},
+            {"slot_index": 3, "meaning": "Future"}
+        ]
+    },
+    {
+        "spread_id": 2,
+        "number_of_cards": 4,
+        "name": "Elements Spread",
+        "cards": [
+            {"slot_index": 1, "meaning": "Fire Element"},
+            {"slot_index": 2, "meaning": "Water Element"},
+            {"slot_index": 3, "meaning": "Air Element"},
+            {"slot_index": 4, "meaning": "Earth Element"}
+        ]
+    }
+]
