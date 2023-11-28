@@ -2,7 +2,7 @@
 from src.database.database_interface import DatabaseInterface
 from src.database.user import User
 from src.gpt_assistant import GPTAssistant
-from src.payment_manager import PaymentManger
+from src.payment_manager import PaymentManager
 from src.tarot.tarot_spread import TarotSpreadParser
 from src.tarot.tarot_spread_instance import TarotSpreadInstance
 from src.telegram_wrapepr import TelegramWrapper
@@ -28,13 +28,13 @@ class TaroBot:
                  telegram_wrapper: TelegramWrapper,
                  db_interface: DatabaseInterface,
                  gpt_assistant: GPTAssistant,
-                 payment_manger: PaymentManger):
+                 payment_manager: PaymentManager):
         self.telegram_id = telegram_id
         self.telegram_wrapper = telegram_wrapper
         self.chat_id = chat_id
         self.db_interface = db_interface
         self.gpt_assistant = gpt_assistant
-        self.payment_manger = payment_manger
+        self.payment_manager = payment_manager
 
     def main_loop(self):
         self.welocome_message(self.chat_id)
@@ -60,7 +60,7 @@ class TaroBot:
         pass
 
     def payment_loop(self):
-        if self.payment_manger.has_enough_funds(self.chat_id):
+        if self.payment_manager.has_enough_funds(self.chat_id):
             self.send_telegram_message(self.chat_id, "Funds check passed. Let's continue.")
         else:
             self.send_telegram_message(self.chat_id, "Insufficient funds. Please recharge your account.")
@@ -108,26 +108,6 @@ class TaroBot:
             self.send_telegram_message(chat_id, "Funds check passed. Let's continue.")
         else:
             self.send_telegram_message(chat_id, "Insufficient funds. Please recharge your account.")
-
-    def select_tarot_spread(self, chat_id) -> TarotSpreadInstance | None:
-        parser = TarotSpreadParser('../../data/spreads_sample.json')
-        spreads = parser.parse_spreads()
-
-        spreads_message = "Please select a tarot spread:\n"
-        for idx, spread in enumerate(spreads, start=1):
-            spreads_message += f"{idx}. {spread.name} - {spread.description}\n"
-
-        self.send_telegram_message(chat_id, spreads_message)
-
-        selected_index = self.wait_for_user_selection(chat_id)
-
-        if 1 <= selected_index <= len(spreads):
-            chosen_spread = spreads[selected_index - 1]
-            spread_instance = TarotSpreadInstance(chosen_spread, '../../data/tarot_cards.json')
-            return spread_instance
-        else:
-            self.send_telegram_message(chat_id, "Invalid selection. Please try again.")
-            return None
 
     def wait_for_user_selection(self, chat_id) -> int:
         return 0

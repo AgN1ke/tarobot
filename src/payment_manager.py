@@ -1,4 +1,4 @@
 # payment_manager.py
-class PaymentManger:
+class PaymentManager:
     def has_enough_funds(self, user_id):
         return True
